@@ -24,6 +24,7 @@
             <argument type="service" id="request_stack"/>
             <argument type="service" id="sylius_adyen.collector.esd.composite"/>
             <argument type="service" id="sylius_adyen.client.paypal_update_order_request_factory"/>
+            <argument type="service" id="sylius_adyen.resolver.currency.payment_currency_resolver"/>
         </service>
 
         <service

@@ -9,6 +9,7 @@
         <id name="id" column="id" type="integer">
             <generator strategy="AUTO"/>
         </id>
+        <field name="token" column="token" type="string" length="20" nullable="true" />
         <field name="level" column="level" type="integer"/>
         <field name="errorCode" column="error_code" type="integer" />
         <field name="message" column="message" type="string" length="5000" />

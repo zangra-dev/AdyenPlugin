@@ -21,5 +21,6 @@ interface LogFactoryInterface
         string $message,
         int $level,
         int $errorCode,
+        ?string $token = null,
     ): LogInterface;
 }

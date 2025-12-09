@@ -38,6 +38,7 @@ final class SyliusAdyenExtension extends AbstractResourceExtension implements Pr
         $this->setEsdParameters($configs, $container);
 
         $container->setParameter('sylius_adyen.integrator_name', $configs['integrator_name']);
+        $container->setParameter('sylius_adyen.currency', $configs['currency']);
     }
 
     public function prepend(ContainerBuilder $container): void

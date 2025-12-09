@@ -19,6 +19,8 @@ class Log implements LogInterface
 
     protected int $level;
 
+    protected ?string $token = null;
+
     protected int $errorCode;
 
     protected string $message;
@@ -68,5 +70,15 @@ class Log implements LogInterface
     public function setDateTime(\DateTime $dateTime): void
     {
         $this->dateTime = $dateTime;
+    }
+
+    public function getToken(): ?string
+    {
+        return $this->token;
+    }
+
+    public function setToken(?string $token = null): void
+    {
+        $this->token = $token;
     }
 }

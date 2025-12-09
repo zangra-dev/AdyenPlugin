@@ -17,6 +17,10 @@ sylius_grid:
                     sortable: ~
                     options:
                         template: "@SyliusAdyenPlugin/Admin/Logger/_level.html.twig"
+                token:
+                    type: string
+                    sortable: ~
+                    label: token
                 errorCode:
                     type: string
                     label: sylius_adyen.ui.logging.error_code

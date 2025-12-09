@@ -113,5 +113,13 @@
             <argument type="service" id="sylius_abstraction.state_machine" />
             <argument type="service" id="sylius_adyen.checker.adyen_payment_method" />
         </service>
+
+        <service
+                class="Sylius\AdyenPlugin\Resolver\Currency\PaymentCurrencyResolver"
+                id="sylius_adyen.resolver.currency.payment_currency_resolver"
+        >
+            <argument type="service" id="sylius.context.channel" />
+            <argument>%sylius_adyen.currency%</argument>
+        </service>
     </services>
 </container>

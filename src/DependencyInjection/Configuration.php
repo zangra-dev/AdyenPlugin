@@ -44,6 +44,7 @@ final class Configuration implements ConfigurationInterface
         $this->addPaymentMethodsSection($rootNode);
         $this->addEsdSection($rootNode);
         $this->addIntegratorNameSection($rootNode);
+        $this->addCurrencySection($rootNode);
 
         return $treeBuilder;
     }
@@ -200,6 +201,17 @@ final class Configuration implements ConfigurationInterface
                             ->end()
                         ->end()
                     ->end()
+                ->end()
+            ->end()
+        ;
+    }
+
+    private function addCurrencySection(ArrayNodeDefinition $rootNode): void
+    {
+        $rootNode
+            ->children()
+                ->scalarNode('currency')
+                    ->defaultNull()
                 ->end()
             ->end()
         ;
