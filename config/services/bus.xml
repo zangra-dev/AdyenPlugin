@@ -161,5 +161,15 @@
 
             <tag name="messenger.message_handler" bus="sylius.command_bus" />
         </service>
+
+        <service
+            id="sylius_adyen.bus.handler.authorize_pending_payment"
+            class="Sylius\AdyenPlugin\Bus\Handler\AuthorizePendingPaymentHandler"
+        >
+            <argument type="service" id="doctrine.orm.entity_manager" />
+            <argument type="service" id="sylius.command_bus" />
+
+            <tag name="messenger.message_handler" bus="sylius.command_bus" />
+        </service>
     </services>
 </container>

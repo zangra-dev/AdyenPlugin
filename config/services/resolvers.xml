@@ -30,6 +30,7 @@
             <argument type="service" id="sylius_adyen.repository.adyen_reference"/>
             <argument type="service" id="sylius_adyen.repository.payment_link" />
             <argument type="service" id="sylius_adyen.bus.payment_command_factory"/>
+            <argument type="service" id="sylius.repository.order"/>
 
             <tag name="sylius_adyen.resolver.notification.command_resolver"/>
         </service>

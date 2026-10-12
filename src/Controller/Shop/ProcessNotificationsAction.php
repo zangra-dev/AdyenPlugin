@@ -15,6 +15,7 @@ namespace Sylius\AdyenPlugin\Controller\Shop;
 
 use Psr\Log\LoggerInterface;
 use Sylius\AdyenPlugin\Resolver\Notification\NotificationResolver\NoCommandResolvedException;
+use Sylius\AdyenPlugin\Resolver\Notification\NotificationResolver\NotificationRetryRequiredException;
 use Sylius\AdyenPlugin\Resolver\Notification\NotificationResolverInterface;
 use Sylius\AdyenPlugin\Resolver\Notification\NotificationToCommandResolverInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -35,6 +36,8 @@ class ProcessNotificationsAction
 
     public function __invoke(string $paymentMethodCode, Request $request): Response
     {
+        $retryRequired = false;
+
         foreach ($this->notificationResolver->resolve($paymentMethodCode, $request) as $notificationItem) {
             if (null === $notificationItem || false === $notificationItem->success) {
                 $this->logger->error(\sprintf(
@@ -52,12 +55,23 @@ class ProcessNotificationsAction
             try {
                 $command = $this->notificationCommandResolver->resolve($paymentMethodCode, $notificationItem);
                 $this->messageBus->dispatch($command);
+            } catch (NotificationRetryRequiredException) {
+                $retryRequired = true;
+
+                $this->logger->info(\sprintf(
+                    'Notification of payment with pspReference [%s] is not acknowledged yet, the customer may still be finalizing the checkout. It is expected to be delivered again.',
+                    $notificationItem->pspReference ?? '',
+                ));
             } catch (NoCommandResolvedException) {
                 $this->logger->error(sprintf(
                     'Tried to dispatch an unknown command. Notification body: %s',
                     json_encode($notificationItem, \JSON_PARTIAL_OUTPUT_ON_ERROR),
                 ));
             }
+        }
+
+        if ($retryRequired) {
+            return new Response('[retry-later]', Response::HTTP_SERVICE_UNAVAILABLE);
         }
 
         return new Response(self::EXPECTED_ADYEN_RESPONSE);
