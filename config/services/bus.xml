@@ -168,6 +168,18 @@
         >
             <argument type="service" id="doctrine.orm.entity_manager" />
             <argument type="service" id="sylius.command_bus" />
+            <argument type="service" id="monolog.logger.adyen" />
+
+            <tag name="messenger.message_handler" bus="sylius.command_bus" />
+        </service>
+
+        <service
+            id="sylius_adyen.bus.handler.deferred_notification"
+            class="Sylius\AdyenPlugin\Bus\Handler\DeferredNotificationHandler"
+        >
+            <argument type="service" id="sylius_adyen.resolver.notification.notification_command" />
+            <argument type="service" id="sylius.command_bus" />
+            <argument type="service" id="monolog.logger.adyen" />
 
             <tag name="messenger.message_handler" bus="sylius.command_bus" />
         </service>

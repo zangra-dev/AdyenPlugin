@@ -14,13 +14,15 @@ declare(strict_types=1);
 namespace Sylius\AdyenPlugin\Controller\Shop;
 
 use Psr\Log\LoggerInterface;
+use Sylius\AdyenPlugin\Bus\Command\DeferredNotification;
 use Sylius\AdyenPlugin\Resolver\Notification\NotificationResolver\NoCommandResolvedException;
-use Sylius\AdyenPlugin\Resolver\Notification\NotificationResolver\NotificationRetryRequiredException;
+use Sylius\AdyenPlugin\Resolver\Notification\NotificationResolver\NotificationDeferralRequiredException;
 use Sylius\AdyenPlugin\Resolver\Notification\NotificationResolverInterface;
 use Sylius\AdyenPlugin\Resolver\Notification\NotificationToCommandResolverInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\DelayStamp;
 
 class ProcessNotificationsAction
 {
@@ -36,8 +38,6 @@ class ProcessNotificationsAction
 
     public function __invoke(string $paymentMethodCode, Request $request): Response
     {
-        $retryRequired = false;
-
         foreach ($this->notificationResolver->resolve($paymentMethodCode, $request) as $notificationItem) {
             if (null === $notificationItem || false === $notificationItem->success) {
                 $this->logger->error(\sprintf(
@@ -55,12 +55,18 @@ class ProcessNotificationsAction
             try {
                 $command = $this->notificationCommandResolver->resolve($paymentMethodCode, $notificationItem);
                 $this->messageBus->dispatch($command);
-            } catch (NotificationRetryRequiredException) {
-                $retryRequired = true;
+            } catch (NotificationDeferralRequiredException $exception) {
+                $delay = $exception->getRemainingSeconds() + 1;
+
+                $this->messageBus->dispatch(
+                    new DeferredNotification($paymentMethodCode, $notificationItem),
+                    [new DelayStamp($delay * 1000)],
+                );
 
                 $this->logger->info(\sprintf(
-                    'Notification of payment with pspReference [%s] is not acknowledged yet, the customer may still be finalizing the checkout. It is expected to be delivered again.',
+                    'Notification of payment with pspReference [%s] was queued for processing in %d seconds, the customer may still be finalizing the checkout.',
                     $notificationItem->pspReference ?? '',
+                    $delay,
                 ));
             } catch (NoCommandResolvedException) {
                 $this->logger->error(sprintf(
@@ -68,10 +74,6 @@ class ProcessNotificationsAction
                     json_encode($notificationItem, \JSON_PARTIAL_OUTPUT_ON_ERROR),
                 ));
             }
-        }
-
-        if ($retryRequired) {
-            return new Response('[retry-later]', Response::HTTP_SERVICE_UNAVAILABLE);
         }
 
         return new Response(self::EXPECTED_ADYEN_RESPONSE);

@@ -22,7 +22,7 @@ use Sylius\AdyenPlugin\Bus\PaymentCommandFactoryInterface;
 use Sylius\AdyenPlugin\Repository\AdyenReferenceRepositoryInterface;
 use Sylius\AdyenPlugin\Repository\PaymentLinkRepositoryInterface;
 use Sylius\AdyenPlugin\Resolver\Notification\NotificationResolver\NoCommandResolvedException;
-use Sylius\AdyenPlugin\Resolver\Notification\NotificationResolver\NotificationRetryRequiredException;
+use Sylius\AdyenPlugin\Resolver\Notification\NotificationResolver\NotificationDeferralRequiredException;
 use Sylius\AdyenPlugin\Resolver\Notification\NotificationResolver\PaymentNotificationResolver;
 use Sylius\AdyenPlugin\Resolver\Notification\Struct\Amount;
 use Sylius\AdyenPlugin\Resolver\Notification\Struct\NotificationItemData;
@@ -67,7 +67,7 @@ final class PaymentNotificationResolverPendingPaymentTest extends TestCase
         self::assertSame($payment, $command->payment);
     }
 
-    public function testItAsksForRedeliveryWhenNotificationIsTooRecent(): void
+    public function testItAsksForDeferralWhenNotificationIsTooRecent(): void
     {
         $this->orderRepository->method('findOneBy')->willReturn(
             $this->createOrder(OrderInterface::STATE_CART, $this->createPayment()),
@@ -76,9 +76,16 @@ final class PaymentNotificationResolverPendingPaymentTest extends TestCase
         $notification = $this->createNotification();
         $notification->eventDate = (new \DateTimeImmutable('-3 seconds'))->format(\DATE_ATOM);
 
-        $this->expectException(NotificationRetryRequiredException::class);
-
-        $this->resolver->resolve('adyen', $notification);
+        try {
+            $this->resolver->resolve('adyen', $notification);
+            self::fail('Expected a deferral exception.');
+        } catch (NotificationDeferralRequiredException $exception) {
+            self::assertEqualsWithDelta(
+                PaymentNotificationResolver::PENDING_PAYMENT_GRACE_PERIOD - 3,
+                $exception->getRemainingSeconds(),
+                2,
+            );
+        }
     }
 
     public function testItDoesNotResolveWhenOrderIsAlreadyPlaced(): void

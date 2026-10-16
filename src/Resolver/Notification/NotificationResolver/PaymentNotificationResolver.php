@@ -52,8 +52,9 @@ final class PaymentNotificationResolver implements CommandResolver
                 throw $exception;
             }
 
-            if ($this->isTooRecent($notificationData)) {
-                throw new NotificationRetryRequiredException();
+            $remainingSeconds = $this->getRemainingGracePeriod($notificationData);
+            if ($remainingSeconds > 0) {
+                throw new NotificationDeferralRequiredException($remainingSeconds);
             }
 
             return new AuthorizePendingPayment($pendingPayment, $notificationData);
@@ -134,19 +135,24 @@ final class PaymentNotificationResolver implements CommandResolver
         return false === $result ? null : $result;
     }
 
-    private function isTooRecent(NotificationItemData $notificationData): bool
+    /**
+     * @return int Seconds left until the grace period is over, 0 if it is over (or the event date is unknown)
+     */
+    private function getRemainingGracePeriod(NotificationItemData $notificationData): int
     {
         if (null === $notificationData->eventDate) {
-            return false;
+            return 0;
         }
 
         try {
             $eventDate = new \DateTimeImmutable($notificationData->eventDate);
         } catch (\Exception) {
-            return false;
+            return 0;
         }
 
-        return (new \DateTimeImmutable())->getTimestamp() - $eventDate->getTimestamp() < self::PENDING_PAYMENT_GRACE_PERIOD;
+        $age = (new \DateTimeImmutable())->getTimestamp() - $eventDate->getTimestamp();
+
+        return max(0, self::PENDING_PAYMENT_GRACE_PERIOD - $age);
     }
 
     private static function isSameAmount(PaymentInterface $payment, NotificationItemData $notificationData): bool
