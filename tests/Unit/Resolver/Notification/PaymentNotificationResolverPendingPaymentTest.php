@@ -26,6 +26,7 @@ use Sylius\AdyenPlugin\Resolver\Notification\NotificationResolver\NotificationDe
 use Sylius\AdyenPlugin\Resolver\Notification\NotificationResolver\PaymentNotificationResolver;
 use Sylius\AdyenPlugin\Resolver\Notification\Struct\Amount;
 use Sylius\AdyenPlugin\Resolver\Notification\Struct\NotificationItemData;
+use Sylius\AdyenPlugin\Resolver\Order\MerchantReferenceOrderResolverInterface;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\PaymentInterface;
 use Sylius\Component\Core\Model\PaymentMethodInterface;
@@ -35,7 +36,7 @@ final class PaymentNotificationResolverPendingPaymentTest extends TestCase
 {
     private AdyenReferenceRepositoryInterface&MockObject $referenceRepository;
 
-    private RepositoryInterface&MockObject $orderRepository;
+    private MockObject&RepositoryInterface $orderRepository;
 
     private PaymentNotificationResolver $resolver;
 
@@ -51,6 +52,7 @@ final class PaymentNotificationResolverPendingPaymentTest extends TestCase
             $this->createMock(PaymentLinkRepositoryInterface::class),
             $this->createMock(PaymentCommandFactoryInterface::class),
             $this->orderRepository,
+            $this->createMock(MerchantReferenceOrderResolverInterface::class),
         );
     }
 
@@ -139,7 +141,7 @@ final class PaymentNotificationResolverPendingPaymentTest extends TestCase
         return $notification;
     }
 
-    private function createPayment(int $amount = 5000): PaymentInterface&MockObject
+    private function createPayment(int $amount = 5000): MockObject&PaymentInterface
     {
         $method = $this->createMock(PaymentMethodInterface::class);
         $method->method('getCode')->willReturn('adyen');
@@ -153,7 +155,7 @@ final class PaymentNotificationResolverPendingPaymentTest extends TestCase
         return $payment;
     }
 
-    private function createOrder(string $state, PaymentInterface $payment): OrderInterface&MockObject
+    private function createOrder(string $state, PaymentInterface $payment): MockObject&OrderInterface
     {
         $order = $this->createMock(OrderInterface::class);
         $order->method('getState')->willReturn($state);

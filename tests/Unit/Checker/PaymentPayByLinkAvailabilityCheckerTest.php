@@ -18,31 +18,26 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Sylius\AdyenPlugin\Checker\AdyenPaymentMethodCheckerInterface;
 use Sylius\AdyenPlugin\Checker\PaymentPayByLinkAvailabilityChecker;
-use Sylius\AdyenPlugin\PaymentGraph;
-use Sylius\AdyenPlugin\Repository\AdyenReferenceRepositoryInterface;
-use Sylius\AdyenPlugin\Repository\PaymentLinkRepositoryInterface;
+use Sylius\AdyenPlugin\Provider\OrderAmountDueProviderInterface;
+use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\PaymentInterface;
 
 final class PaymentPayByLinkAvailabilityCheckerTest extends TestCase
 {
-    private MockObject|PaymentLinkRepositoryInterface $paymentLinkRepository;
+    private AdyenPaymentMethodCheckerInterface&MockObject $adyenPaymentMethodChecker;
 
-    private AdyenReferenceRepositoryInterface|MockObject $referenceRepository;
-
-    private AdyenPaymentMethodCheckerInterface|MockObject $adyenPaymentMethodChecker;
+    private MockObject&OrderAmountDueProviderInterface $orderAmountDueProvider;
 
     private PaymentPayByLinkAvailabilityChecker $checker;
 
     protected function setUp(): void
     {
-        $this->paymentLinkRepository = $this->createMock(PaymentLinkRepositoryInterface::class);
-        $this->referenceRepository = $this->createMock(AdyenReferenceRepositoryInterface::class);
         $this->adyenPaymentMethodChecker = $this->createMock(AdyenPaymentMethodCheckerInterface::class);
+        $this->orderAmountDueProvider = $this->createMock(OrderAmountDueProviderInterface::class);
 
         $this->checker = new PaymentPayByLinkAvailabilityChecker(
-            $this->paymentLinkRepository,
-            $this->referenceRepository,
             $this->adyenPaymentMethodChecker,
+            $this->orderAmountDueProvider,
         );
     }
 
@@ -56,178 +51,90 @@ final class PaymentPayByLinkAvailabilityCheckerTest extends TestCase
             ->with($payment)
             ->willReturn(false);
 
-        $result = $this->checker->canBeGenerated($payment);
+        $this->orderAmountDueProvider->expects(self::never())->method('getAmountDue');
 
-        self::assertFalse($result);
+        self::assertFalse($this->checker->canBeGenerated($payment));
     }
 
     #[DataProvider('provideNotAllowedStates')]
     public function testCanBeGeneratedReturnsFalseWhenPaymentStateIsNotAllowed(string $state): void
     {
-        $payment = $this->createMock(PaymentInterface::class);
+        $payment = $this->createPayment($state, 5000);
 
-        $this->adyenPaymentMethodChecker
-            ->expects(self::once())
-            ->method('isAdyenPayment')
-            ->with($payment)
-            ->willReturn(true);
+        $this->orderAmountDueProvider->expects(self::never())->method('getAmountDue');
 
-        $payment
-            ->expects(self::once())
-            ->method('getState')
-            ->willReturn($state);
-
-        $this->paymentLinkRepository
-            ->expects(self::never())
-            ->method('findBy');
-
-        $result = $this->checker->canBeGenerated($payment);
-
-        self::assertFalse($result);
+        self::assertFalse($this->checker->canBeGenerated($payment));
     }
 
     #[DataProvider('provideAllowedStates')]
-    public function testCanBeGeneratedReturnsTrueWhenPaymentLinkExists(string $state): void
+    public function testCanBeGeneratedReturnsTrueWhenThereIsAnAmountDue(string $state): void
     {
-        $payment = $this->createMock(PaymentInterface::class);
+        $payment = $this->createPayment($state, 5000);
 
-        $this->adyenPaymentMethodChecker
-            ->expects(self::once())
-            ->method('isAdyenPayment')
-            ->with($payment)
-            ->willReturn(true);
-
-        $payment
-            ->expects(self::once())
-            ->method('getState')
-            ->willReturn($state);
-
-        $this->paymentLinkRepository
-            ->expects(self::once())
-            ->method('findBy')
-            ->with(['payment' => $payment], null, 1)
-            ->willReturn(['paymentLink']);
-
-        $this->referenceRepository
-            ->expects(self::never())
-            ->method('findBy');
-
-        $result = $this->checker->canBeGenerated($payment);
-
-        self::assertTrue($result);
+        self::assertTrue($this->checker->canBeGenerated($payment));
     }
 
-    #[DataProvider('provideAllowedStates')]
-    public function testCanBeGeneratedReturnsTrueWhenNoPaymentLinkExistsAndNoReferenceExists(string $state): void
+    public function testCanBeGeneratedReturnsFalseWhenNothingIsDue(): void
     {
-        $payment = $this->createMock(PaymentInterface::class);
+        $payment = $this->createPayment(PaymentInterface::STATE_NEW, 0);
 
-        $this->adyenPaymentMethodChecker
-            ->expects(self::once())
-            ->method('isAdyenPayment')
-            ->with($payment)
-            ->willReturn(true);
-
-        $payment
-            ->expects(self::once())
-            ->method('getState')
-            ->willReturn($state);
-
-        $this->paymentLinkRepository
-            ->expects(self::once())
-            ->method('findBy')
-            ->with(['payment' => $payment], null, 1)
-            ->willReturn([]);
-
-        $this->referenceRepository
-            ->expects(self::once())
-            ->method('findBy')
-            ->with(['payment' => $payment], null, 1)
-            ->willReturn([]);
-
-        $result = $this->checker->canBeGenerated($payment);
-
-        self::assertTrue($result);
+        self::assertFalse($this->checker->canBeGenerated($payment));
     }
 
-    #[DataProvider('provideAllowedStates')]
-    public function testCanBeGeneratedReturnsFalseWhenNoPaymentLinkExistsButReferenceExists(string $state): void
+    public function testCanBeGeneratedReturnsFalseWhenPaymentHasNoOrder(): void
     {
         $payment = $this->createMock(PaymentInterface::class);
+        $payment->method('getState')->willReturn(PaymentInterface::STATE_NEW);
+        $payment->method('getOrder')->willReturn(null);
+        $this->adyenPaymentMethodChecker->method('isAdyenPayment')->willReturn(true);
 
-        $this->adyenPaymentMethodChecker
-            ->expects(self::once())
-            ->method('isAdyenPayment')
-            ->with($payment)
-            ->willReturn(true);
-
-        $payment
-            ->expects(self::once())
-            ->method('getState')
-            ->willReturn($state);
-
-        $this->paymentLinkRepository
-            ->expects(self::once())
-            ->method('findBy')
-            ->with(['payment' => $payment], null, 1)
-            ->willReturn([]);
-
-        $this->referenceRepository
-            ->expects(self::once())
-            ->method('findBy')
-            ->with(['payment' => $payment], null, 1)
-            ->willReturn(['reference']);
-
-        $result = $this->checker->canBeGenerated($payment);
-
-        self::assertFalse($result);
+        self::assertFalse($this->checker->canBeGenerated($payment));
     }
 
-    public function testCanBeGeneratedWithCustomAllowedStates(): void
+    public function testCanBeGeneratedUsesCustomAllowedStates(): void
     {
-        $customAllowedStates = [PaymentInterface::STATE_COMPLETED];
         $checker = new PaymentPayByLinkAvailabilityChecker(
-            $this->paymentLinkRepository,
-            $this->referenceRepository,
             $this->adyenPaymentMethodChecker,
-            $customAllowedStates,
+            $this->orderAmountDueProvider,
+            [PaymentInterface::STATE_AUTHORIZED],
         );
 
+        self::assertTrue($checker->canBeGenerated($this->createPayment(PaymentInterface::STATE_AUTHORIZED, 5000)));
+        self::assertFalse($checker->canBeGenerated($this->createPayment(PaymentInterface::STATE_NEW, 5000)));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function provideAllowedStates(): iterable
+    {
+        yield 'new state' => [PaymentInterface::STATE_NEW];
+        yield 'processing state' => [PaymentInterface::STATE_PROCESSING];
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function provideNotAllowedStates(): iterable
+    {
+        yield 'completed state' => [PaymentInterface::STATE_COMPLETED];
+        yield 'failed state' => [PaymentInterface::STATE_FAILED];
+        yield 'cancelled state' => [PaymentInterface::STATE_CANCELLED];
+        yield 'authorized state' => [PaymentInterface::STATE_AUTHORIZED];
+        yield 'refunded state' => [PaymentInterface::STATE_REFUNDED];
+    }
+
+    private function createPayment(string $state, int $amountDue): MockObject&PaymentInterface
+    {
+        $order = $this->createMock(OrderInterface::class);
+        $this->orderAmountDueProvider->method('getAmountDue')->with($order)->willReturn($amountDue);
+
         $payment = $this->createMock(PaymentInterface::class);
+        $payment->method('getState')->willReturn($state);
+        $payment->method('getOrder')->willReturn($order);
 
-        $this->adyenPaymentMethodChecker
-            ->expects(self::once())
-            ->method('isAdyenPayment')
-            ->with($payment)
-            ->willReturn(true);
+        $this->adyenPaymentMethodChecker->method('isAdyenPayment')->willReturn(true);
 
-        $payment
-            ->expects(self::once())
-            ->method('getState')
-            ->willReturn(PaymentInterface::STATE_NEW);
-
-        $result = $checker->canBeGenerated($payment);
-
-        self::assertFalse($result);
-    }
-
-    public static function provideAllowedStates(): array
-    {
-        return [
-            'new state' => [PaymentInterface::STATE_NEW],
-            'processing state' => [PaymentInterface::STATE_PROCESSING],
-        ];
-    }
-
-    public static function provideNotAllowedStates(): array
-    {
-        return [
-            'completed state' => [PaymentInterface::STATE_COMPLETED],
-            'failed state' => [PaymentInterface::STATE_FAILED],
-            'cancelled state' => [PaymentInterface::STATE_CANCELLED],
-            'authorized state' => [PaymentInterface::STATE_AUTHORIZED],
-            'refunded state' => [PaymentInterface::STATE_REFUNDED],
-            'processing reversal state' => [PaymentGraph::STATE_PROCESSING_REVERSAL],
-        ];
+        return $payment;
     }
 }

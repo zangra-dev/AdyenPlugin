@@ -1,0 +1,3 @@
+sylius_adyen:
+    payment_link:
+        invalid_amount: 'Het bedrag van de betaallink moet groter zijn dan 0 en mag het verschuldigde bedrag (%amount_due%) niet overschrijden.'

@@ -6,3 +6,4 @@ sylius_adyen:
     payment_link:
         generation_fail: 'Failed to generate payment link.'
         generation_success: 'Payment link has been successfully generated and sent to the customer.'
+        invalid_amount: 'The payment link amount must be greater than 0 and cannot exceed the amount due (%amount_due%).'

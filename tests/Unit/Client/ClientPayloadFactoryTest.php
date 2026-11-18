@@ -25,6 +25,7 @@ use Sylius\AdyenPlugin\Collector\CompositeEsdCollectorInterface;
 use Sylius\AdyenPlugin\Collector\ItemDetailLineCollector;
 use Sylius\AdyenPlugin\Collector\Level2EsdCollector;
 use Sylius\AdyenPlugin\Collector\Level3EsdCollector;
+use Sylius\AdyenPlugin\Resolver\Currency\PaymentCurrencyResolver;
 use Sylius\AdyenPlugin\Resolver\Version\VersionResolverInterface;
 use Sylius\Component\Core\Model\AddressInterface;
 use Sylius\Component\Core\Model\CustomerInterface;
@@ -75,6 +76,7 @@ final class ClientPayloadFactoryTest extends TestCase
             $this->requestStack,
             $this->esdCollector,
             $this->paypalUpdateOrderRequestFactory,
+            $this->createCurrencyResolver(),
         );
 
         $this->versionResolver->expects($this->any())
@@ -178,6 +180,7 @@ final class ClientPayloadFactoryTest extends TestCase
             $this->requestStack,
             $esdCollector,
             $this->paypalUpdateOrderRequestFactory,
+            $this->createCurrencyResolver(),
         );
 
         $options = new ArrayObject([
@@ -267,6 +270,7 @@ final class ClientPayloadFactoryTest extends TestCase
             $this->requestStack,
             $esdCollector,
             $this->paypalUpdateOrderRequestFactory,
+            $this->createCurrencyResolver(),
         );
 
         $options = new ArrayObject([
@@ -313,6 +317,7 @@ final class ClientPayloadFactoryTest extends TestCase
 
         $order = $this->createMock(OrderInterface::class);
         $order->expects($this->once())->method('getNumber')->willReturn('000005');
+        $order->method('getCurrencyCode')->willReturn('USD');
         $order->expects($this->once())->method('getBillingAddress')->willReturn($billingAddress);
         $order->expects($this->once())->method('getLocaleCode')->willReturn(null);
 
@@ -327,6 +332,7 @@ final class ClientPayloadFactoryTest extends TestCase
 
         $payment = $this->createMock(PaymentInterface::class);
         $payment->expects($this->once())->method('getOrder')->willReturn($order);
+        $payment->method('getAmount')->willReturn(7500);
 
         $result = $this->factory->createForPaymentLink($options, $payment);
 
@@ -335,7 +341,7 @@ final class ClientPayloadFactoryTest extends TestCase
         self::assertEquals('000005', $result['reference']);
         self::assertEquals('TestMerchant', $result['merchantAccount']);
         self::assertEquals('US', $result['countryCode']);
-        self::assertEquals(['value' => 10000, 'currency' => 'USD'], $result['amount']);
+        self::assertEquals(['value' => 7500, 'currency' => 'USD'], $result['amount']);
         self::assertEquals('test@example.com', $result['shopperEmail']);
         self::assertArrayNotHasKey('shopperIp', $result);
         self::assertArrayNotHasKey('shopperLocale', $result);
@@ -352,6 +358,7 @@ final class ClientPayloadFactoryTest extends TestCase
 
         $order = $this->createMock(OrderInterface::class);
         $order->expects($this->once())->method('getNumber')->willReturn('000006');
+        $order->method('getCurrencyCode')->willReturn('EUR');
         $order->expects($this->once())->method('getBillingAddress')->willReturn($billingAddress);
         $order->expects($this->exactly(2))->method('getLocaleCode')->willReturn('fr_FR');
 
@@ -365,6 +372,7 @@ final class ClientPayloadFactoryTest extends TestCase
 
         $payment = $this->createMock(PaymentInterface::class);
         $payment->expects($this->once())->method('getOrder')->willReturn($order);
+        $payment->method('getAmount')->willReturn(12500);
 
         $result = $this->factory->createForPaymentLink($options, $payment);
 
@@ -373,7 +381,7 @@ final class ClientPayloadFactoryTest extends TestCase
         self::assertEquals('000006', $result['reference']);
         self::assertEquals('TestMerchant', $result['merchantAccount']);
         self::assertEquals('FR', $result['countryCode']);
-        self::assertEquals(['value' => 20000, 'currency' => 'EUR'], $result['amount']);
+        self::assertEquals(['value' => 12500, 'currency' => 'EUR'], $result['amount']);
         self::assertEquals('test@example.fr', $result['shopperEmail']);
         self::assertEquals('fr-FR', $result['shopperLocale']);
     }
@@ -386,6 +394,7 @@ final class ClientPayloadFactoryTest extends TestCase
 
         $order = $this->createMock(OrderInterface::class);
         $order->expects($this->once())->method('getNumber')->willReturn('000007');
+        $order->method('getCurrencyCode')->willReturn('GBP');
         $order->expects($this->once())->method('getBillingAddress')->willReturn(null);
         $order->expects($this->once())->method('getLocaleCode')->willReturn(null);
 
@@ -399,6 +408,7 @@ final class ClientPayloadFactoryTest extends TestCase
 
         $payment = $this->createMock(PaymentInterface::class);
         $payment->expects($this->once())->method('getOrder')->willReturn($order);
+        $payment->method('getAmount')->willReturn(9900);
 
         $result = $this->factory->createForPaymentLink($options, $payment);
 
@@ -407,7 +417,7 @@ final class ClientPayloadFactoryTest extends TestCase
         self::assertEquals('000007', $result['reference']);
         self::assertEquals('TestMerchant', $result['merchantAccount']);
         self::assertEquals('ZZ', $result['countryCode']); // NO_COUNTRY_AVAILABLE_PLACEHOLDER
-        self::assertEquals(['value' => 15000, 'currency' => 'GBP'], $result['amount']);
+        self::assertEquals(['value' => 9900, 'currency' => 'GBP'], $result['amount']);
         self::assertEquals('test@example.uk', $result['shopperEmail']);
         self::assertArrayNotHasKey('shopperLocale', $result);
     }
@@ -471,5 +481,13 @@ final class ClientPayloadFactoryTest extends TestCase
 
         $this->assertIsArray($result);
         $this->assertEquals(['pspReference' => $pspReference, 'paymentData' => $paymentData], $result);
+    }
+
+    private function createCurrencyResolver(): PaymentCurrencyResolver
+    {
+        $currencyResolver = $this->createMock(PaymentCurrencyResolver::class);
+        $currencyResolver->method('resolve')->willReturnArgument(0);
+
+        return $currencyResolver;
     }
 }

@@ -163,6 +163,20 @@
         </service>
 
         <service
+            id="sylius_adyen.bus.handler.authorize_orphan_payment_link"
+            class="Sylius\AdyenPlugin\Bus\Handler\AuthorizeOrphanPaymentLinkHandler"
+        >
+            <argument type="service" id="doctrine.orm.entity_manager" />
+            <argument type="service" id="sylius.command_bus" />
+            <argument type="service" id="sylius_adyen.checker.adyen_payment_method" />
+            <argument type="service" id="sylius.repository.payment_method" />
+            <argument type="service" id="sylius.factory.payment" />
+            <argument type="service" id="monolog.logger.adyen" />
+
+            <tag name="messenger.message_handler" bus="sylius.command_bus" />
+        </service>
+
+        <service
             id="sylius_adyen.bus.handler.authorize_pending_payment"
             class="Sylius\AdyenPlugin\Bus\Handler\AuthorizePendingPaymentHandler"
         >

@@ -1,0 +1,3 @@
+sylius_adyen:
+    ui:
+        payment_link_amount: 'Montant du lien de paiement'

@@ -14,7 +14,7 @@ sylius_adyen_admin_log:
 
 sylius_adyen_admin_order_payment_generate_pay_link:
     path: /adyen/payment/{id}/generate-pay-link
-    methods: [GET]
+    methods: [GET, POST]
     controller: sylius_adyen.controller.admin.payment.generate_pay_link
 
 sylius_adyen_admin_order_payment_reverse:

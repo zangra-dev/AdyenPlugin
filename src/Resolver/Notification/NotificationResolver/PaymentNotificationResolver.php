@@ -14,12 +14,14 @@ declare(strict_types=1);
 namespace Sylius\AdyenPlugin\Resolver\Notification\NotificationResolver;
 
 use Doctrine\ORM\NoResultException;
+use Sylius\AdyenPlugin\Bus\Command\AuthorizeOrphanPaymentLink;
 use Sylius\AdyenPlugin\Bus\Command\AuthorizePendingPayment;
 use Sylius\AdyenPlugin\Bus\PaymentCommandFactoryInterface;
 use Sylius\AdyenPlugin\Exception\UnmappedAdyenActionException;
 use Sylius\AdyenPlugin\Repository\AdyenReferenceRepositoryInterface;
 use Sylius\AdyenPlugin\Repository\PaymentLinkRepositoryInterface;
 use Sylius\AdyenPlugin\Resolver\Notification\Struct\NotificationItemData;
+use Sylius\AdyenPlugin\Resolver\Order\MerchantReferenceOrderResolverInterface;
 use Sylius\AdyenPlugin\Resolver\Payment\EventCodeResolverInterface;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\PaymentInterface;
@@ -39,6 +41,7 @@ final class PaymentNotificationResolver implements CommandResolver
         private readonly PaymentLinkRepositoryInterface $paymentLinkRepository,
         private readonly PaymentCommandFactoryInterface $commandFactory,
         private readonly RepositoryInterface $orderRepository,
+        private readonly MerchantReferenceOrderResolverInterface $merchantReferenceOrderResolver,
     ) {
     }
 
@@ -49,7 +52,12 @@ final class PaymentNotificationResolver implements CommandResolver
         } catch (NoCommandResolvedException $exception) {
             $pendingPayment = $this->fetchPendingPaymentByMerchantReference($paymentMethodCode, $notificationData);
             if (null === $pendingPayment) {
-                throw $exception;
+                $orphanCommand = $this->resolveOrphanPaymentLink($notificationData);
+                if (null === $orphanCommand) {
+                    throw $exception;
+                }
+
+                return $orphanCommand;
             }
 
             $remainingSeconds = $this->getRemainingGracePeriod($notificationData);
@@ -133,6 +141,36 @@ final class PaymentNotificationResolver implements CommandResolver
         $result = $payments->last();
 
         return false === $result ? null : $result;
+    }
+
+    /**
+     * A payment link created directly in the Adyen backoffice is unknown on our side: neither its psp
+     * reference nor its link id match anything. A successful authorisation is then matched with a placed
+     * order using the merchant reference ("Order-000186791", zero padding ignored) and the same currency.
+     */
+    private function resolveOrphanPaymentLink(NotificationItemData $notificationData): ?AuthorizeOrphanPaymentLink
+    {
+        if (
+            EventCodeResolverInterface::EVENT_AUTHORIZATION !== $notificationData->eventCode ||
+            !filter_var($notificationData->success, \FILTER_VALIDATE_BOOLEAN) ||
+            null === $notificationData->pspReference ||
+            null === $notificationData->merchantReference ||
+            null === $notificationData->amount ||
+            empty($notificationData->additionalData['paymentLinkId'] ?? null)
+        ) {
+            return null;
+        }
+
+        $order = $this->merchantReferenceOrderResolver->resolve($notificationData->merchantReference);
+        if (
+            !$order instanceof OrderInterface ||
+            OrderInterface::STATE_CART === $order->getState() ||
+            $order->getCurrencyCode() !== $notificationData->amount->currency
+        ) {
+            return null;
+        }
+
+        return new AuthorizeOrphanPaymentLink($order, $notificationData);
     }
 
     /**

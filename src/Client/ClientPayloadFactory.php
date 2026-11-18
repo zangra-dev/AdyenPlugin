@@ -232,13 +232,15 @@ final class ClientPayloadFactory implements ClientPayloadFactoryInterface
 
         $payload = $this->getOrderDataForPayment($order);
         $payload = $payload + [
-            'amount' => [
-                'value' => $order->getTotal(),
-                'currency' => $this->currencyResolver->resolve($order->getCurrencyCode()),
-            ],
             'reference' => (string) $order->getNumber(),
             'countryCode' => $order->getBillingAddress()?->getCountryCode() ?? self::NO_COUNTRY_AVAILABLE_PLACEHOLDER,
             'merchantAccount' => $options['merchantAccount'],
+        ];
+
+        // the payment link is created for the amount of the payment (not necessarily the order total)
+        $payload['amount'] = [
+            'value' => $payment->getAmount(),
+            'currency' => $this->currencyResolver->resolve($order->getCurrencyCode()),
         ];
 
         if ($order->getLocaleCode() !== null) {

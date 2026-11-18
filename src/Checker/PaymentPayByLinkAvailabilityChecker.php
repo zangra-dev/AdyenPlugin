@@ -13,16 +13,14 @@ declare(strict_types=1);
 
 namespace Sylius\AdyenPlugin\Checker;
 
-use Sylius\AdyenPlugin\Repository\AdyenReferenceRepositoryInterface;
-use Sylius\AdyenPlugin\Repository\PaymentLinkRepositoryInterface;
+use Sylius\AdyenPlugin\Provider\OrderAmountDueProviderInterface;
 use Sylius\Component\Core\Model\PaymentInterface;
 
 final class PaymentPayByLinkAvailabilityChecker implements PaymentPayByLinkAvailabilityCheckerInterface
 {
     public function __construct(
-        private PaymentLinkRepositoryInterface $paymentLinkRepository,
-        private AdyenReferenceRepositoryInterface $referenceRepository,
         private AdyenPaymentMethodCheckerInterface $adyenPaymentMethodChecker,
+        private OrderAmountDueProviderInterface $orderAmountDueProvider,
         private array $allowedStates = [PaymentInterface::STATE_NEW, PaymentInterface::STATE_PROCESSING],
     ) {
     }
@@ -37,14 +35,8 @@ final class PaymentPayByLinkAvailabilityChecker implements PaymentPayByLinkAvail
             return false;
         }
 
-        if (0 !== count($this->paymentLinkRepository->findBy(['payment' => $payment], limit: 1))) {
-            return true;
-        }
+        $order = $payment->getOrder();
 
-        if (0 === count($this->referenceRepository->findBy(['payment' => $payment], limit: 1))) {
-            return true;
-        }
-
-        return false;
+        return null !== $order && $this->orderAmountDueProvider->getAmountDue($order) > 0;
     }
 }

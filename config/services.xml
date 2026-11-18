@@ -88,6 +88,12 @@
         </service>
 
         <service
+            id="sylius_adyen.provider.order_amount_due"
+            class="Sylius\AdyenPlugin\Provider\OrderAmountDueProvider"
+        />
+        <service id="Sylius\AdyenPlugin\Provider\OrderAmountDueProviderInterface" alias="sylius_adyen.provider.order_amount_due" />
+
+        <service
             id="sylius_adyen.twig.extension.adyen_payment_checker"
             class="Sylius\AdyenPlugin\Twig\Extension\AdyenPaymentCheckerExtension"
         >
@@ -101,6 +107,7 @@
             class="Sylius\AdyenPlugin\Twig\Extension\PaymentLinkGenerationCheckerExtension"
         >
             <argument type="service" id="sylius_adyen.checker.payment_pay_by_link_availability" />
+            <argument type="service" id="sylius_adyen.provider.order_amount_due" />
 
             <tag name="twig.extension" />
         </service>

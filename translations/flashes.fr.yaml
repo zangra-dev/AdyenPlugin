@@ -1,0 +1,3 @@
+sylius_adyen:
+    payment_link:
+        invalid_amount: 'Le montant du lien de paiement doit être supérieur à 0 et ne peut pas dépasser le montant dû (%amount_due%).'

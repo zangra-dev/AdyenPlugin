@@ -56,9 +56,8 @@
             id="sylius_adyen.checker.payment_pay_by_link_availability"
             class="Sylius\AdyenPlugin\Checker\PaymentPayByLinkAvailabilityChecker"
         >
-            <argument type="service" id="sylius_adyen.repository.payment_link" />
-            <argument type="service" id="sylius_adyen.repository.adyen_reference" />
             <argument type="service" id="sylius_adyen.checker.adyen_payment_method" />
+            <argument type="service" id="sylius_adyen.provider.order_amount_due" />
         </service>
 
         <service

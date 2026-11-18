@@ -24,6 +24,14 @@
         </service>
 
         <service
+                class="Sylius\AdyenPlugin\Resolver\Order\MerchantReferenceOrderResolver"
+                id="sylius_adyen.resolver.order.merchant_reference_order"
+        >
+            <argument type="service" id="sylius.repository.order"/>
+        </service>
+        <service id="Sylius\AdyenPlugin\Resolver\Order\MerchantReferenceOrderResolverInterface" alias="sylius_adyen.resolver.order.merchant_reference_order"/>
+
+        <service
             class="Sylius\AdyenPlugin\Resolver\Notification\NotificationResolver\PaymentNotificationResolver"
             id="sylius_adyen.resolver.notification.notification_resolver.payment_notification"
         >
@@ -31,6 +39,7 @@
             <argument type="service" id="sylius_adyen.repository.payment_link" />
             <argument type="service" id="sylius_adyen.bus.payment_command_factory"/>
             <argument type="service" id="sylius.repository.order"/>
+            <argument type="service" id="sylius_adyen.resolver.order.merchant_reference_order"/>
 
             <tag name="sylius_adyen.resolver.notification.command_resolver"/>
         </service>

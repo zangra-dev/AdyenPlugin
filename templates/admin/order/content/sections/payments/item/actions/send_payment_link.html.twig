@@ -2,7 +2,20 @@
 
 {%- if sylius_adyen_can_generate_payment_link(payment) -%}
     {% set should_be_resent = payment.state != constant('Sylius\\Component\\Payment\\Model\\PaymentInterface::STATE_NEW') %}
-        <a href="{{ path('sylius_adyen_admin_order_payment_generate_pay_link', {'id': payment.id}) }}" class="btn">
+    {% set amount_due = sylius_adyen_payment_link_amount_due(payment) %}
+
+    <form action="{{ path('sylius_adyen_admin_order_payment_generate_pay_link', {'id': payment.id}) }}" method="POST" novalidate class="d-inline-flex gap-1 align-items-center">
+        <input
+            type="text"
+            inputmode="decimal"
+            name="amount"
+            class="form-control form-control-sm"
+            value="{{ (amount_due / 100)|number_format(2, '.', '') }}"
+            title="{{ 'sylius_adyen.ui.payment_link_amount'|trans }}"
+            aria-label="{{ 'sylius_adyen.ui.payment_link_amount'|trans }}"
+            style="width: 7rem;"
+        >
+        <button type="submit" class="btn">
             {{ ux_icon('tabler:check') }}
             <span>
             {%- if should_be_resent -%}
@@ -11,5 +24,6 @@
                 {{ 'sylius_adyen.ui.send_payment_link'|trans }}
             {%- endif -%}
             </span>
-        </a>
+        </button>
+    </form>
 {%- endif -%}

@@ -16,6 +16,7 @@ namespace Sylius\AdyenPlugin\Controller\Admin;
 use Sylius\AdyenPlugin\Email\Sender\PaymentLinkEmailSenderInterface;
 use Sylius\AdyenPlugin\Exception\PaymentLinkGenerationException;
 use Sylius\AdyenPlugin\Generator\PaymentLinkGeneratorInterface;
+use Sylius\AdyenPlugin\Provider\OrderAmountDueProviderInterface;
 use Sylius\Component\Core\Model\PaymentInterface;
 use Sylius\Component\Core\Repository\PaymentRepositoryInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -37,6 +38,7 @@ final class GeneratePayLinkAction
         private readonly PaymentLinkEmailSenderInterface $paymentLinkEmailSender,
         private readonly UrlGeneratorInterface $urlGenerator,
         RequestStack $requestStack,
+        private readonly OrderAmountDueProviderInterface $orderAmountDueProvider,
     ) {
         $this->requestStack = $requestStack;
     }
@@ -49,9 +51,32 @@ final class GeneratePayLinkAction
             throw new NotFoundHttpException(sprintf('Payment with ID %s not found.', $id));
         }
 
+        $order = $payment->getOrder();
+        Assert::notNull($order);
+
+        $redirect = new RedirectResponse(
+            $this->urlGenerator->generate('sylius_admin_order_show', [
+                'id' => $order->getId(),
+            ]),
+        );
+
+        $amountDue = $this->orderAmountDueProvider->getAmountDue($order);
+        $amount = $this->resolveAmount($request, $amountDue);
+        if (null === $amount || $amount <= 0 || $amount > $amountDue) {
+            $this->addFlash('error', 'sylius_adyen.payment_link.invalid_amount', [
+                '%amount_due%' => $this->formatAmount($amountDue),
+            ]);
+
+            return $redirect;
+        }
+
+        $previousAmount = $payment->getAmount();
+
         try {
-            $recipient = $payment->getOrder()?->getCustomer()?->getEmail();
+            $recipient = $order->getCustomer()?->getEmail();
             Assert::stringNotEmpty($recipient, 'Cannot generate payment link for payment without customer email.');
+
+            $payment->setAmount($amount);
 
             $paymentLink = $this->paymentLinkGenerator->generate($payment);
 
@@ -59,13 +84,33 @@ final class GeneratePayLinkAction
 
             $this->addFlash('success', 'sylius_adyen.payment_link.generation_success');
         } catch (PaymentLinkGenerationException) {
+            $payment->setAmount((int) $previousAmount);
+
             $this->addFlash('error', 'sylius_adyen.payment_link.generation_fail');
         }
 
-        return new RedirectResponse(
-            $this->urlGenerator->generate('sylius_admin_order_show', [
-                'id' => $payment->getOrder()->getId(),
-            ]),
-        );
+        return $redirect;
+    }
+
+    /**
+     * @return int|null amount in minor units, the amount due when none was submitted, null when it is not valid
+     */
+    private function resolveAmount(Request $request, int $amountDue): ?int
+    {
+        $submitted = $request->request->get('amount', $request->query->get('amount'));
+        if (null === $submitted || '' === trim((string) $submitted)) {
+            return $amountDue;
+        }
+
+        if (1 !== preg_match('/^(\d+)(?:[.,](\d{1,2}))?$/', trim((string) $submitted), $matches)) {
+            return null;
+        }
+
+        return ((int) $matches[1]) * 100 + (int) str_pad($matches[2] ?? '', 2, '0');
+    }
+
+    private function formatAmount(int $amount): string
+    {
+        return number_format($amount / 100, 2, '.', '');
     }
 }
