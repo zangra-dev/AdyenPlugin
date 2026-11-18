@@ -108,6 +108,8 @@
         >
             <argument type="service" id="sylius_adyen.checker.payment_pay_by_link_availability" />
             <argument type="service" id="sylius_adyen.provider.order_amount_due" />
+            <argument type="service" id="sylius_adyen.repository.payment_link" />
+            <argument type="service" id="sylius_adyen.checker.payment_link_reuse" />
 
             <tag name="twig.extension" />
         </service>
@@ -117,6 +119,7 @@
             class="Sylius\AdyenPlugin\Email\Sender\PaymentLinkEmailSender"
         >
             <argument type="service" id="sylius.email_sender" />
+            <argument type="service" id="sylius_adyen.repository.adyen_reference" />
         </service>
 
         <service

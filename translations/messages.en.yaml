@@ -2,7 +2,8 @@ sylius_adyen:
     email:
         payment_link:
             subject: Payment link
-            content: 'You can complete your payment via: <a href="%payment_link_url%">%payment_link_url%</a>'
+            content: 'Hello %first_name% %last_name%,<br>You can complete the payment of your order %order_number% via: <a href="%payment_link_url%">%payment_link_url%</a>'
+            validity: 'This link is valid until %expires_at%.'
     form:
         product_variant:
             commodity_code: Commodity Code
@@ -20,6 +21,7 @@ sylius_adyen:
         capture_mode_automatic: Automatic
         capture_mode_manual: Manual
         client_key: Client key
+        copy_payment_link: Copy
         esd: Enhanced Scheme Data
         esd_auto_detect: Auto-detect ESD Type
         esd_auto_detect_help: Automatically determine ESD type based on merchant category code
@@ -48,10 +50,15 @@ sylius_adyen:
         merchant_category_code_help: Your 4-digit MCC code to automatically determine ESD type
         notification_endpoint_description: In order to configure Adyen payment, head to merchant panel and use following URL as target
         payment_failed: Payment failed, try again
+        payment_link: Payment link
         payment_link_amount: Payment link amount
+        payment_link_copied: Copied
+        payment_link_expired_on: Expired on %date%
+        payment_link_valid_until: Valid until %date%
         payment_processing: Payment is being processed, please watch the notifications on your e-mail
         platform: Platform
         resend_payment_link: Resend payment link
+        send_email: Send email
         send_payment_link: Send payment link
         test_platform: Test platform
 

@@ -12,6 +12,8 @@
 
         <field name="paymentLinkId" column="payment_link_id" type="string" length="64" unique="true" />
         <field name="paymentLinkUrl" column="payment_link_url" type="string" length="1000" />
+        <field name="amount" column="amount" type="integer" />
+        <field name="expiresAt" column="expires_at" type="datetime" nullable="true" />
         <field name="createdAt" column="created_at" type="datetime" />
 
         <many-to-one field="payment" target-entity="Sylius\Component\Payment\Model\PaymentInterface">

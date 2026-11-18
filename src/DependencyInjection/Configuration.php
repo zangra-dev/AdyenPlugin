@@ -45,6 +45,7 @@ final class Configuration implements ConfigurationInterface
         $this->addEsdSection($rootNode);
         $this->addIntegratorNameSection($rootNode);
         $this->addCurrencySection($rootNode);
+        $this->addPaymentLinkSection($rootNode);
 
         return $treeBuilder;
     }
@@ -199,6 +200,25 @@ final class Configuration implements ConfigurationInterface
                                     ->end()
                                 ->end()
                             ->end()
+                        ->end()
+                    ->end()
+                ->end()
+            ->end()
+        ;
+    }
+
+    private function addPaymentLinkSection(ArrayNodeDefinition $rootNode): void
+    {
+        $rootNode
+            ->children()
+                ->arrayNode('payment_link')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->integerNode('expiration_days')
+                            ->info('Number of days a generated payment link stays valid (Adyen allows at most 70).')
+                            ->defaultValue(15)
+                            ->min(1)
+                            ->max(70)
                         ->end()
                     ->end()
                 ->end()

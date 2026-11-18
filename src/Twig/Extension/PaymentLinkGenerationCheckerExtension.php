@@ -13,8 +13,11 @@ declare(strict_types=1);
 
 namespace Sylius\AdyenPlugin\Twig\Extension;
 
+use Sylius\AdyenPlugin\Checker\PaymentLinkReuseCheckerInterface;
 use Sylius\AdyenPlugin\Checker\PaymentPayByLinkAvailabilityCheckerInterface;
+use Sylius\AdyenPlugin\Entity\PaymentLinkInterface;
 use Sylius\AdyenPlugin\Provider\OrderAmountDueProviderInterface;
+use Sylius\AdyenPlugin\Repository\PaymentLinkRepositoryInterface;
 use Sylius\Component\Core\Model\PaymentInterface;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
@@ -24,6 +27,8 @@ final class PaymentLinkGenerationCheckerExtension extends AbstractExtension
     public function __construct(
         private readonly PaymentPayByLinkAvailabilityCheckerInterface $paymentPayByLinkAvailabilityChecker,
         private readonly OrderAmountDueProviderInterface $orderAmountDueProvider,
+        private readonly ?PaymentLinkRepositoryInterface $paymentLinkRepository = null,
+        private readonly ?PaymentLinkReuseCheckerInterface $paymentLinkReuseChecker = null,
     ) {
     }
 
@@ -40,7 +45,31 @@ final class PaymentLinkGenerationCheckerExtension extends AbstractExtension
                 'sylius_adyen_payment_link_amount_due',
                 $this->getAmountDue(...),
             ),
+            new TwigFunction(
+                'sylius_adyen_payment_link',
+                $this->getPaymentLink(...),
+            ),
+            new TwigFunction(
+                'sylius_adyen_reusable_payment_link',
+                $this->getReusablePaymentLink(...),
+            ),
         ];
+    }
+
+    /**
+     * Latest payment link generated for the payment, if any.
+     */
+    public function getPaymentLink(PaymentInterface $payment): ?PaymentLinkInterface
+    {
+        return $this->paymentLinkRepository?->findLatestByPayment($payment);
+    }
+
+    /**
+     * The existing link that would be sent again (instead of generating a new one) for the current amount due.
+     */
+    public function getReusablePaymentLink(PaymentInterface $payment): ?PaymentLinkInterface
+    {
+        return $this->paymentLinkReuseChecker?->findReusable($payment, $this->getAmountDue($payment));
     }
 
     /**

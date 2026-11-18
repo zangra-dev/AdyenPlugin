@@ -97,6 +97,7 @@
             <argument type="service" id="router" />
             <argument type="service" id="request_stack" />
             <argument type="service" id="sylius_adyen.provider.order_amount_due" />
+            <argument type="service" id="sylius_adyen.checker.payment_link_reuse" />
         </service>
 
         <service

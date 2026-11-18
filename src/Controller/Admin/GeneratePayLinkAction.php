@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Sylius\AdyenPlugin\Controller\Admin;
 
+use Sylius\AdyenPlugin\Checker\PaymentLinkReuseCheckerInterface;
 use Sylius\AdyenPlugin\Email\Sender\PaymentLinkEmailSenderInterface;
 use Sylius\AdyenPlugin\Exception\PaymentLinkGenerationException;
 use Sylius\AdyenPlugin\Generator\PaymentLinkGeneratorInterface;
@@ -39,6 +40,7 @@ final class GeneratePayLinkAction
         private readonly UrlGeneratorInterface $urlGenerator,
         RequestStack $requestStack,
         private readonly OrderAmountDueProviderInterface $orderAmountDueProvider,
+        private readonly ?PaymentLinkReuseCheckerInterface $paymentLinkReuseChecker = null,
     ) {
         $this->requestStack = $requestStack;
     }
@@ -71,18 +73,28 @@ final class GeneratePayLinkAction
         }
 
         $previousAmount = $payment->getAmount();
+        $sendEmail = $this->shouldSendEmail($request);
 
         try {
             $recipient = $order->getCustomer()?->getEmail();
-            Assert::stringNotEmpty($recipient, 'Cannot generate payment link for payment without customer email.');
+            if ($sendEmail) {
+                Assert::stringNotEmpty($recipient, 'Cannot send payment link to a customer without email.');
+            }
 
-            $payment->setAmount($amount);
+            $paymentLink = $this->paymentLinkReuseChecker?->findReusable($payment, $amount);
+            $reused = null !== $paymentLink;
 
-            $paymentLink = $this->paymentLinkGenerator->generate($payment);
+            if (!$reused) {
+                $payment->setAmount($amount);
 
-            $this->paymentLinkEmailSender->send($paymentLink, $recipient);
+                $paymentLink = $this->paymentLinkGenerator->generate($payment);
+            }
 
-            $this->addFlash('success', 'sylius_adyen.payment_link.generation_success');
+            if ($sendEmail) {
+                $this->paymentLinkEmailSender->send($paymentLink, (string) $recipient);
+            }
+
+            $this->addFlash('success', $this->resolveSuccessMessage($reused, $sendEmail));
         } catch (PaymentLinkGenerationException) {
             $payment->setAmount((int) $previousAmount);
 
@@ -90,6 +102,25 @@ final class GeneratePayLinkAction
         }
 
         return $redirect;
+    }
+
+    private function shouldSendEmail(Request $request): bool
+    {
+        $submitted = $request->request->get('send_email', $request->query->get('send_email'));
+        if (null === $submitted) {
+            return true;
+        }
+
+        return filter_var($submitted, \FILTER_VALIDATE_BOOLEAN);
+    }
+
+    private function resolveSuccessMessage(bool $reused, bool $sendEmail): string
+    {
+        if (!$sendEmail) {
+            return 'sylius_adyen.payment_link.generated_not_sent';
+        }
+
+        return $reused ? 'sylius_adyen.payment_link.resent_success' : 'sylius_adyen.payment_link.generation_success';
     }
 
     /**

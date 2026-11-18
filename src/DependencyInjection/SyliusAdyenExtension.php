@@ -39,6 +39,7 @@ final class SyliusAdyenExtension extends AbstractResourceExtension implements Pr
 
         $container->setParameter('sylius_adyen.integrator_name', $configs['integrator_name']);
         $container->setParameter('sylius_adyen.currency', $configs['currency']);
+        $container->setParameter('sylius_adyen.payment_link.expiration_days', $configs['payment_link']['expiration_days']);
     }
 
     public function prepend(ContainerBuilder $container): void

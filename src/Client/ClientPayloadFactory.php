@@ -35,6 +35,7 @@ final class ClientPayloadFactory implements ClientPayloadFactoryInterface
         private readonly CompositeEsdCollectorInterface $esdCollector,
         private readonly PaypalUpdateOrderRequestFactoryInterface $paypalUpdateOrderRequestFactory,
         private readonly PaymentCurrencyResolver $currencyResolver,
+        private readonly int $paymentLinkExpirationDays = 15,
     ) {
     }
 
@@ -242,6 +243,10 @@ final class ClientPayloadFactory implements ClientPayloadFactoryInterface
             'value' => $payment->getAmount(),
             'currency' => $this->currencyResolver->resolve($order->getCurrencyCode()),
         ];
+
+        $payload['expiresAt'] = (new \DateTimeImmutable())
+            ->modify(sprintf('+%d days', $this->paymentLinkExpirationDays))
+            ->format(\DateTimeInterface::ATOM);
 
         if ($order->getLocaleCode() !== null) {
             $payload['shopperLocale'] = str_replace('_', '-', $order->getLocaleCode());

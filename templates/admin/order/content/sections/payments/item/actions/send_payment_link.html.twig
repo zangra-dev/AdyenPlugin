@@ -1,10 +1,63 @@
 {% set payment = hookable_metadata.context.payment %}
 
 {%- if sylius_adyen_can_generate_payment_link(payment) -%}
-    {% set should_be_resent = payment.state != constant('Sylius\\Component\\Payment\\Model\\PaymentInterface::STATE_NEW') %}
     {% set amount_due = sylius_adyen_payment_link_amount_due(payment) %}
+    {% set payment_link = sylius_adyen_payment_link(payment) %}
+    {% set reusable_link = sylius_adyen_reusable_payment_link(payment) %}
+    {% set link_input_id = 'adyen-payment-link-' ~ payment.id %}
 
-    <form action="{{ path('sylius_adyen_admin_order_payment_generate_pay_link', {'id': payment.id}) }}" method="POST" novalidate class="d-inline-flex gap-1 align-items-center">
+    {% if payment_link is not null %}
+        <div class="d-flex flex-column gap-1 mb-2" data-adyen-payment-link>
+            <label for="{{ link_input_id }}" class="form-label small mb-0">{{ 'sylius_adyen.ui.payment_link'|trans }}</label>
+            <div class="input-group input-group-sm">
+                <input
+                    type="text"
+                    id="{{ link_input_id }}"
+                    class="form-control"
+                    value="{{ payment_link.paymentLinkUrl }}"
+                    readonly
+                    onfocus="this.select()"
+                >
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    data-copied-label="{{ 'sylius_adyen.ui.payment_link_copied'|trans }}"
+                    onclick="(function (button) {
+                        var input = document.getElementById('{{ link_input_id }}');
+                        var label = button.querySelector('span');
+                        var original = label.textContent;
+                        var done = function () {
+                            label.textContent = button.dataset.copiedLabel;
+                            setTimeout(function () { label.textContent = original; }, 2000);
+                        };
+                        input.select();
+                        if (navigator.clipboard && window.isSecureContext) {
+                            navigator.clipboard.writeText(input.value).then(done);
+                        } else {
+                            document.execCommand('copy');
+                            done();
+                        }
+                    })(this)"
+                >
+                    {{ ux_icon('tabler:copy') }}
+                    <span>{{ 'sylius_adyen.ui.copy_payment_link'|trans }}</span>
+                </button>
+            </div>
+            <small class="text-muted">
+                {{ (payment_link.amount / 100)|number_format(2, '.', '') }}
+                {% if payment_link.expiresAt is not null %}
+                    &middot;
+                    {% if payment_link.expired %}
+                        {{ 'sylius_adyen.ui.payment_link_expired_on'|trans({'%date%': payment_link.expiresAt|date('Y-m-d H:i')}) }}
+                    {% else %}
+                        {{ 'sylius_adyen.ui.payment_link_valid_until'|trans({'%date%': payment_link.expiresAt|date('Y-m-d H:i')}) }}
+                    {% endif %}
+                {% endif %}
+            </small>
+        </div>
+    {% endif %}
+
+    <form action="{{ path('sylius_adyen_admin_order_payment_generate_pay_link', {'id': payment.id}) }}" method="POST" novalidate class="d-inline-flex flex-wrap gap-2 align-items-center">
         <input
             type="text"
             inputmode="decimal"
@@ -15,10 +68,22 @@
             aria-label="{{ 'sylius_adyen.ui.payment_link_amount'|trans }}"
             style="width: 7rem;"
         >
+        <div class="form-check mb-0">
+            <input type="hidden" name="send_email" value="0">
+            <input
+                type="checkbox"
+                name="send_email"
+                value="1"
+                id="adyen-send-email-{{ payment.id }}"
+                class="form-check-input"
+                checked
+            >
+            <label class="form-check-label" for="adyen-send-email-{{ payment.id }}">{{ 'sylius_adyen.ui.send_email'|trans }}</label>
+        </div>
         <button type="submit" class="btn">
             {{ ux_icon('tabler:check') }}
             <span>
-            {%- if should_be_resent -%}
+            {%- if reusable_link is not null -%}
                 {{ 'sylius_adyen.ui.resend_payment_link'|trans }}
             {%- else -%}
                 {{ 'sylius_adyen.ui.send_payment_link'|trans }}

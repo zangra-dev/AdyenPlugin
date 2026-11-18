@@ -29,7 +29,9 @@ final class PaymentLinkFactory implements PaymentLinkFactoryInterface
         PaymentInterface $payment,
         string $paymentLinkId,
         string $paymentLinkUrl,
+        int $amount = 0,
+        ?\DateTimeInterface $expiresAt = null,
     ): PaymentLinkInterface {
-        return new PaymentLink($payment, $paymentLinkId, $paymentLinkUrl);
+        return new PaymentLink($payment, $paymentLinkId, $paymentLinkUrl, $amount, $expiresAt);
     }
 }

@@ -24,5 +24,7 @@ interface PaymentLinkRepositoryInterface extends RepositoryInterface
 
     public function findOneByPaymentMethodCodeAndLinkId(string $paymentMethodCode, string $paymentLinkId): ?PaymentLinkInterface;
 
+    public function findLatestByPayment(PaymentInterface $payment): ?PaymentLinkInterface;
+
     public function removeByLinkId(string $paymentLinkId): void;
 }

@@ -345,6 +345,42 @@ final class ClientPayloadFactoryTest extends TestCase
         self::assertEquals('test@example.com', $result['shopperEmail']);
         self::assertArrayNotHasKey('shopperIp', $result);
         self::assertArrayNotHasKey('shopperLocale', $result);
+
+        self::assertArrayHasKey('expiresAt', $result);
+        $expiresAt = new \DateTimeImmutable($result['expiresAt']);
+        $expected = (new \DateTimeImmutable())->modify('+15 days');
+        self::assertEqualsWithDelta($expected->getTimestamp(), $expiresAt->getTimestamp(), 5);
+    }
+
+    public function testItCreatesPaymentLinkWithCustomExpirationDays(): void
+    {
+        $factory = new ClientPayloadFactory(
+            $this->versionResolver,
+            $this->normalizer,
+            $this->requestStack,
+            $this->esdCollector,
+            $this->paypalUpdateOrderRequestFactory,
+            $this->createCurrencyResolver(),
+            3,
+        );
+
+        $order = $this->createMock(OrderInterface::class);
+        $order->method('getNumber')->willReturn('000008');
+        $order->method('getCurrencyCode')->willReturn('USD');
+        $order->method('getBillingAddress')->willReturn(null);
+        $order->method('getLocaleCode')->willReturn(null);
+
+        $this->normalizer->method('normalize')->willReturn([]);
+
+        $payment = $this->createMock(PaymentInterface::class);
+        $payment->method('getOrder')->willReturn($order);
+        $payment->method('getAmount')->willReturn(1000);
+
+        $result = $factory->createForPaymentLink(new ArrayObject(['merchantAccount' => 'TestMerchant']), $payment);
+
+        $expiresAt = new \DateTimeImmutable($result['expiresAt']);
+        $expected = (new \DateTimeImmutable())->modify('+3 days');
+        self::assertEqualsWithDelta($expected->getTimestamp(), $expiresAt->getTimestamp(), 5);
     }
 
     public function testItCreatesPaymentLinkWithLocaleCode(): void

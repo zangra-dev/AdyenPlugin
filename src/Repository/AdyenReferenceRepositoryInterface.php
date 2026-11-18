@@ -24,4 +24,6 @@ interface AdyenReferenceRepositoryInterface extends RepositoryInterface
     public function getOneForRefundByCodeAndReference(string $code, string $pspReference): AdyenReferenceInterface;
 
     public function findAllByPayment(PaymentInterface $payment): array;
+
+    public function findLatestByPayment(PaymentInterface $payment): ?AdyenReferenceInterface;
 }

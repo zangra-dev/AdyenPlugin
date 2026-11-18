@@ -1,3 +1,16 @@
 sylius_adyen:
+    email:
+        payment_link:
+            subject: 'Betaallink'
+            content: 'Beste %first_name% %last_name%,<br>U kunt de betaling van uw bestelling %order_number% voltooien via: <a href="%payment_link_url%">%payment_link_url%</a>'
+            validity: "Deze link is geldig tot %expires_at%."
     ui:
+        copy_payment_link: 'Kopiëren'
+        payment_link: 'Betaallink'
         payment_link_amount: 'Bedrag van de betaallink'
+        payment_link_copied: 'Gekopieerd'
+        payment_link_expired_on: 'Verlopen op %date%'
+        payment_link_valid_until: 'Geldig tot %date%'
+        resend_payment_link: 'Betaallink opnieuw versturen'
+        send_email: 'E-mail versturen'
+        send_payment_link: 'Betaallink versturen'

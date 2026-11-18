@@ -1,3 +1,5 @@
 sylius_adyen:
     payment_link:
+        resent_success: 'Le lien de paiement existant est toujours valide et a été renvoyé au client.'
+        generated_not_sent: "Le lien de paiement est prêt. Aucun e-mail n'a été envoyé au client."
         invalid_amount: 'Le montant du lien de paiement doit être supérieur à 0 et ne peut pas dépasser le montant dû (%amount_due%).'

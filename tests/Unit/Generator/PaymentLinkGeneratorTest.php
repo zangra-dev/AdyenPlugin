@@ -93,6 +93,8 @@ final class PaymentLinkGeneratorTest extends TestCase
             ->method('getId')
             ->willReturn(123);
 
+        $payment->method('getAmount')->willReturn(7500);
+
         $payment->expects($this->once())
             ->method('getMethod')
             ->willReturn($paymentMethod);
@@ -105,6 +107,7 @@ final class PaymentLinkGeneratorTest extends TestCase
             'url' => 'https://test.adyen.link/PL123456789',
             'id' => 'PL123456789',
             'reference' => 'payment-123',
+            'expiresAt' => '2030-01-15T10:00:00+00:00',
         ];
 
         $this->adyenPaymentMethodChecker
@@ -134,7 +137,14 @@ final class PaymentLinkGeneratorTest extends TestCase
         $this->paymentLinkFactory
             ->expects($this->once())
             ->method('create')
-            ->with($payment, 'PL123456789', 'https://test.adyen.link/PL123456789')
+            ->with(
+                $payment,
+                'PL123456789',
+                'https://test.adyen.link/PL123456789',
+                7500,
+                $this->callback(static fn (mixed $expiresAt): bool => $expiresAt instanceof \DateTimeInterface &&
+                    $expiresAt->getTimestamp() === (new \DateTimeImmutable('2030-01-15T10:00:00+00:00'))->getTimestamp()),
+            )
             ->willReturn($paymentLink);
 
         $this->entityManager

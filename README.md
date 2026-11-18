@@ -32,6 +32,9 @@
 📖 Full documentation is available here:
 👉 [Adyen Plugin Documentation](https://docs.sylius.com/adyen-plugin)
 
+Additional notes:
+- [Payment links: validity, optional email and overriding the email in your project](docs/payment-link-email.md)
+
 ## Security issues
 
 If you think that you have found a security issue, please do not use the issue tracker and do not post it publicly.

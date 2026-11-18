@@ -5,5 +5,15 @@
 {% endblock %}
 
 {% block body %}
-    {{ 'sylius_adyen.email.payment_link.content'|trans({'%payment_link_url%': paymentLinkUrl })|raw }}
+    {{ 'sylius_adyen.email.payment_link.content'|trans({
+        '%first_name%': customerFirstName|default('')|e,
+        '%last_name%': customerLastName|default('')|e,
+        '%order_number%': orderNumber|default('')|e,
+        '%psp_reference%': pspReference|default('')|e,
+        '%payment_link_url%': paymentLinkUrl|e,
+    })|raw }}
+    {% if expiresAt is not null %}
+        <br>
+        {{ 'sylius_adyen.email.payment_link.validity'|trans({'%expires_at%': expiresAt|date('Y-m-d')}) }}
+    {% endif %}
 {% endblock %}

@@ -24,5 +24,7 @@ interface PaymentLinkFactoryInterface extends FactoryInterface
         PaymentInterface $payment,
         string $paymentLinkId,
         string $paymentLinkUrl,
+        int $amount = 0,
+        ?\DateTimeInterface $expiresAt = null,
     ): PaymentLinkInterface;
 }

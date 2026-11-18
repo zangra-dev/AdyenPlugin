@@ -1,3 +1,16 @@
 sylius_adyen:
+    email:
+        payment_link:
+            subject: 'Lien de paiement'
+            content: 'Bonjour %first_name% %last_name%,<br>Vous pouvez régler votre commande %order_number% via : <a href="%payment_link_url%">%payment_link_url%</a>'
+            validity: "Ce lien est valable jusqu'au %expires_at%."
     ui:
+        copy_payment_link: 'Copier'
+        payment_link: 'Lien de paiement'
         payment_link_amount: 'Montant du lien de paiement'
+        payment_link_copied: 'Copié'
+        payment_link_expired_on: 'Expiré le %date%'
+        payment_link_valid_until: "Valable jusqu'au %date%"
+        resend_payment_link: 'Renvoyer le lien de paiement'
+        send_email: "Envoyer l'e-mail"
+        send_payment_link: 'Envoyer le lien de paiement'

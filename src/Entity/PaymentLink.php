@@ -25,6 +25,8 @@ class PaymentLink implements PaymentLinkInterface
         private readonly PaymentInterface $payment,
         private readonly string $paymentLinkId,
         private readonly string $paymentLinkUrl,
+        private readonly int $amount = 0,
+        private readonly ?\DateTimeInterface $expiresAt = null,
     ) {
         $this->createdAt = new \DateTimeImmutable();
     }
@@ -52,5 +54,24 @@ class PaymentLink implements PaymentLinkInterface
     public function getPayment(): PaymentInterface
     {
         return $this->payment;
+    }
+
+    public function getAmount(): int
+    {
+        return $this->amount;
+    }
+
+    public function getExpiresAt(): ?\DateTimeInterface
+    {
+        return $this->expiresAt;
+    }
+
+    public function isExpired(?\DateTimeInterface $now = null): bool
+    {
+        if (null === $this->expiresAt) {
+            return true;
+        }
+
+        return $this->expiresAt <= ($now ?? new \DateTimeImmutable());
     }
 }

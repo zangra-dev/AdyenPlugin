@@ -25,4 +25,12 @@ interface PaymentLinkInterface extends ResourceInterface
     public function getCreatedAt(): ?\DateTimeInterface;
 
     public function getPayment(): PaymentInterface;
+
+    /** Amount in minor units the link was generated for. */
+    public function getAmount(): int;
+
+    public function getExpiresAt(): ?\DateTimeInterface;
+
+    /** A link without a known expiry date is considered expired. */
+    public function isExpired(?\DateTimeInterface $now = null): bool;
 }

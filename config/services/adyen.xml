@@ -25,6 +25,7 @@
             <argument type="service" id="sylius_adyen.collector.esd.composite"/>
             <argument type="service" id="sylius_adyen.client.paypal_update_order_request_factory"/>
             <argument type="service" id="sylius_adyen.resolver.currency.payment_currency_resolver"/>
+            <argument>%sylius_adyen.payment_link.expiration_days%</argument>
         </service>
 
         <service

@@ -45,6 +45,18 @@ class AdyenReferenceRepository extends EntityRepository implements AdyenReferenc
         ;
     }
 
+    public function findLatestByPayment(PaymentInterface $payment): ?AdyenReferenceInterface
+    {
+        return $this->createQueryBuilder('r')
+            ->where('r.payment = :payment')
+            ->setParameter('payment', $payment)
+            ->orderBy('r.id', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult()
+        ;
+    }
+
     private function getQueryBuilderForCodeAndReference(string $code, string $pspReference): QueryBuilder
     {
         $qb = $this

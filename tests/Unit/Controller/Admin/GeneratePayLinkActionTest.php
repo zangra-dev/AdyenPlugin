@@ -16,6 +16,7 @@ namespace Tests\Sylius\AdyenPlugin\Unit\Controller\Admin;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Sylius\AdyenPlugin\Checker\PaymentLinkReuseCheckerInterface;
 use Sylius\AdyenPlugin\Controller\Admin\GeneratePayLinkAction;
 use Sylius\AdyenPlugin\Email\Sender\PaymentLinkEmailSenderInterface;
 use Sylius\AdyenPlugin\Entity\PaymentLinkInterface;
@@ -43,6 +44,8 @@ final class GeneratePayLinkActionTest extends TestCase
 
     private MockObject&PaymentLinkEmailSenderInterface $emailSender;
 
+    private MockObject&PaymentLinkReuseCheckerInterface $reuseChecker;
+
     private Session $session;
 
     private GeneratePayLinkAction $action;
@@ -52,6 +55,7 @@ final class GeneratePayLinkActionTest extends TestCase
         $this->paymentRepository = $this->createMock(PaymentRepositoryInterface::class);
         $this->generator = $this->createMock(PaymentLinkGeneratorInterface::class);
         $this->emailSender = $this->createMock(PaymentLinkEmailSenderInterface::class);
+        $this->reuseChecker = $this->createMock(PaymentLinkReuseCheckerInterface::class);
 
         $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
         $urlGenerator->method('generate')->willReturn('/admin/orders/1');
@@ -72,6 +76,7 @@ final class GeneratePayLinkActionTest extends TestCase
             $urlGenerator,
             $requestStack,
             $amountDueProvider,
+            $this->reuseChecker,
         );
     }
 
@@ -171,6 +176,90 @@ final class GeneratePayLinkActionTest extends TestCase
         ($this->action)('1', new Request());
 
         self::assertSame(['sylius_adyen.payment_link.generation_fail'], $this->getFlashMessages('error'));
+    }
+
+    #[DataProvider('provideSendEmailDisabledValues')]
+    public function testItGeneratesTheLinkWithoutSendingTheEmailWhenNotRequested(string $value): void
+    {
+        $payment = $this->createPayment(30000);
+        $paymentLink = $this->createMock(PaymentLinkInterface::class);
+
+        $this->paymentRepository->method('find')->willReturn($payment);
+        $this->generator->expects(self::once())->method('generate')->with($payment)->willReturn($paymentLink);
+        $this->emailSender->expects(self::never())->method('send');
+
+        ($this->action)('1', new Request([], ['send_email' => $value]));
+
+        self::assertSame(['sylius_adyen.payment_link.generated_not_sent'], $this->getFlashMessages('success'));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function provideSendEmailDisabledValues(): iterable
+    {
+        yield 'zero' => ['0'];
+        yield 'false' => ['false'];
+        yield 'empty' => [''];
+    }
+
+    public function testItSendsTheEmailWhenRequested(): void
+    {
+        $payment = $this->createPayment(30000);
+        $this->expectGeneration($payment);
+
+        ($this->action)('1', new Request([], ['send_email' => '1']));
+
+        self::assertSame(['sylius_adyen.payment_link.generation_success'], $this->getFlashMessages('success'));
+    }
+
+    public function testItGeneratesTheLinkWithoutCustomerEmailWhenNoEmailIsRequested(): void
+    {
+        $order = $this->createMock(OrderInterface::class);
+        $order->method('getId')->willReturn(1);
+        $order->method('getCustomer')->willReturn(null);
+
+        $payment = $this->createMock(PaymentInterface::class);
+        $payment->method('getOrder')->willReturn($order);
+        $payment->method('getAmount')->willReturn(30000);
+
+        $this->paymentRepository->method('find')->willReturn($payment);
+        $this->generator->expects(self::once())->method('generate')->willReturn($this->createMock(PaymentLinkInterface::class));
+        $this->emailSender->expects(self::never())->method('send');
+
+        ($this->action)('1', new Request([], ['send_email' => '0']));
+
+        self::assertSame(['sylius_adyen.payment_link.generated_not_sent'], $this->getFlashMessages('success'));
+    }
+
+    public function testItOnlyResendsTheExistingLinkWhenItIsReusable(): void
+    {
+        $payment = $this->createPayment(30000);
+        $paymentLink = $this->createMock(PaymentLinkInterface::class);
+
+        $this->paymentRepository->method('find')->willReturn($payment);
+        $this->reuseChecker->method('findReusable')->with($payment, self::AMOUNT_DUE)->willReturn($paymentLink);
+        $this->generator->expects(self::never())->method('generate');
+        $payment->expects(self::never())->method('setAmount');
+        $this->emailSender->expects(self::once())->method('send')->with($paymentLink, 'customer@example.com');
+
+        ($this->action)('1', new Request());
+
+        self::assertSame(['sylius_adyen.payment_link.resent_success'], $this->getFlashMessages('success'));
+    }
+
+    public function testItDoesNothingElseWhenTheLinkIsReusableAndNoEmailIsRequested(): void
+    {
+        $payment = $this->createPayment(30000);
+
+        $this->paymentRepository->method('find')->willReturn($payment);
+        $this->reuseChecker->method('findReusable')->willReturn($this->createMock(PaymentLinkInterface::class));
+        $this->generator->expects(self::never())->method('generate');
+        $this->emailSender->expects(self::never())->method('send');
+
+        ($this->action)('1', new Request([], ['send_email' => '0']));
+
+        self::assertSame(['sylius_adyen.payment_link.generated_not_sent'], $this->getFlashMessages('success'));
     }
 
     private function expectGeneration(PaymentInterface $payment): void

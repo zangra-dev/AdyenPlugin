@@ -61,6 +61,17 @@
         </service>
 
         <service
+            id="sylius_adyen.checker.payment_link_reuse"
+            class="Sylius\AdyenPlugin\Checker\PaymentLinkReuseChecker"
+        >
+            <argument type="service" id="sylius_adyen.repository.payment_link" />
+        </service>
+        <service
+            id="Sylius\AdyenPlugin\Checker\PaymentLinkReuseCheckerInterface"
+            alias="sylius_adyen.checker.payment_link_reuse"
+        />
+
+        <service
             id="sylius_adyen.checker.refund.order_refunds_list_availability"
             class="Sylius\AdyenPlugin\Checker\Refund\OrderRefundsListAvailabilityChecker"
             decorates="sylius_refund.checker.order_refunds_list_availability"

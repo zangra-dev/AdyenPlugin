@@ -1,3 +1,5 @@
 sylius_adyen:
     payment_link:
+        resent_success: 'De bestaande betaallink is nog geldig en is opnieuw naar de klant verzonden.'
+        generated_not_sent: 'De betaallink is klaar. Er is geen e-mail naar de klant verzonden.'
         invalid_amount: 'Het bedrag van de betaallink moet groter zijn dan 0 en mag het verschuldigde bedrag (%amount_due%) niet overschrijden.'

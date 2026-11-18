@@ -48,6 +48,18 @@ class PaymentLinkRepository extends EntityRepository implements PaymentLinkRepos
         ;
     }
 
+    public function findLatestByPayment(PaymentInterface $payment): ?PaymentLinkInterface
+    {
+        return $this->createQueryBuilder('o')
+            ->andWhere('o.payment = :payment')
+            ->setParameter('payment', $payment)
+            ->orderBy('o.id', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult()
+        ;
+    }
+
     public function removeByLinkId(string $paymentLinkId): void
     {
         $paymentLink = $this->findOneBy(['paymentLinkId' => $paymentLinkId]);

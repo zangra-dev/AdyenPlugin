@@ -86,7 +86,13 @@ final class PaymentLinkGenerator implements PaymentLinkGeneratorInterface
         }
 
         $payment->setDetails($response);
-        $paymentLink = $this->paymentLinkFactory->create($payment, $response['id'], $response['url']);
+        $paymentLink = $this->paymentLinkFactory->create(
+            $payment,
+            $response['id'],
+            $response['url'],
+            (int) $payment->getAmount(),
+            $this->resolveExpiresAt($response),
+        );
 
         $this->entityManager->persist($paymentLink);
 
@@ -99,6 +105,19 @@ final class PaymentLinkGenerator implements PaymentLinkGeneratorInterface
         $this->entityManager->flush();
 
         return $paymentLink;
+    }
+
+    private function resolveExpiresAt(array $response): ?\DateTimeInterface
+    {
+        if (!isset($response['expiresAt']) || !is_string($response['expiresAt'])) {
+            return null;
+        }
+
+        try {
+            return new \DateTimeImmutable($response['expiresAt']);
+        } catch (\Exception) {
+            return null;
+        }
     }
 
     private function expireAndRemoveOldLinks(AdyenClientInterface $adyenClient, PaymentInterface $payment): void
